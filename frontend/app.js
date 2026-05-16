@@ -47,8 +47,8 @@ let hiddenRoutes = [];
 
 let routeSummaries = {};
 
-// TRACK MUTARI MANUALE
-let movedStops = [];
+// TRACK FINAL MOVES ONLY
+let movedStops = {};
 
 const uploadBtn =
     document.getElementById('uploadBtn');
@@ -88,7 +88,7 @@ uploadBtn.addEventListener('click', async () => {
 
     clearMap();
 
-    movedStops = [];
+    movedStops = {};
 
     const formData = new FormData();
 
@@ -226,7 +226,6 @@ async function drawRealRoute(routeName, stops, color) {
 
     try {
 
-        // SORTARE DUPA APROPIERE
         stops.sort((a, b) => {
 
             const distA =
@@ -244,12 +243,10 @@ async function drawRealRoute(routeName, stops, color) {
             return distA - distB;
         });
 
-        // START DEPOT
         const coordinates = [
             [DEPOT.lng, DEPOT.lat]
         ];
 
-        // STOPS
         stops.forEach(stop => {
 
             coordinates.push([
@@ -258,7 +255,6 @@ async function drawRealRoute(routeName, stops, color) {
             ]);
         });
 
-        // END DEPOT
         coordinates.push([
             DEPOT.lng,
             DEPOT.lat
@@ -293,12 +289,10 @@ async function drawRealRoute(routeName, stops, color) {
         const summary =
             data.features[0].properties.summary;
 
-        // METERS -> MILES
         const distanceMiles =
             (summary.distance * 0.000621371)
             .toFixed(1);
 
-        // SECONDS -> HOURS + MINUTES
         const totalMinutes =
             Math.round(summary.duration / 60);
 
@@ -361,12 +355,6 @@ function createPopup(index) {
 function getRouteOptions(currentRoute) {
 
     const routes = [
-        "Ruta 1",
-        "Ruta 2",
-        "Ruta 3",
-        "Ruta 4",
-        "Ruta 5",
-        "Ruta 6",
         "Driver 1",
         "Driver 2",
         "Driver 3",
@@ -386,7 +374,7 @@ function getRouteOptions(currentRoute) {
 }
 
 
-// MOVE STOP MANUAL
+// MOVE STOP
 window.changeRoute = async function(index) {
 
     const select = document.getElementById(
@@ -395,26 +383,56 @@ window.changeRoute = async function(index) {
 
     const newRoute = select.value;
 
+    const stop =
+        stopsData[index];
+
     const oldRoute =
-        stopsData[index].route;
+        stop.route;
 
-    // TRACK MOVE
-    movedStops.push({
+    // NO CHANGE
+    if (oldRoute === newRoute) {
+        return;
+    }
 
-        postcode:
-            stopsData[index].postcode,
+    // FIRST MOVE
+    if (!movedStops[stop.postcode]) {
 
-        from:
-            oldRoute,
+        movedStops[stop.postcode] = {
 
-        to:
-            newRoute,
+            postcode:
+                stop.postcode,
 
-        movedAt:
-            new Date().toLocaleString()
-    });
+            originalRoute:
+                oldRoute,
 
-    stopsData[index].route = newRoute;
+            finalRoute:
+                newRoute,
+
+            movedAt:
+                new Date().toLocaleString()
+        };
+
+    } else {
+
+        // KEEP ORIGINAL
+        movedStops[stop.postcode].finalRoute =
+            newRoute;
+
+        movedStops[stop.postcode].movedAt =
+            new Date().toLocaleString();
+    }
+
+    // RETURNED TO ORIGINAL
+    if (
+        movedStops[stop.postcode].originalRoute ===
+        newRoute
+    ) {
+
+        delete movedStops[stop.postcode];
+    }
+
+    // APPLY CHANGE
+    stop.route = newRoute;
 
     const driverMatch =
         newRoute.match(/Driver (\d+)/);
@@ -424,13 +442,9 @@ window.changeRoute = async function(index) {
         const driverNumber =
             parseInt(driverMatch[1]) - 1;
 
-        stopsData[index].color =
+        stop.color =
             DRIVER_COLORS[driverNumber];
 
-    } else {
-
-        stopsData[index].color =
-            ROUTE_COLORS[newRoute];
     }
 
     await renderMap();
@@ -451,8 +465,6 @@ function renderSidebar() {
     ];
 
     uniqueRoutes.forEach(route => {
-
-        if (route === "Invalid") return;
 
         const count = stopsData.filter(
             x => x.route === route
@@ -548,7 +560,7 @@ window.toggleRoute = async function(route) {
 };
 
 
-// SMART ANGULAR SWEEP REBALANCE
+// REBALANCE
 function rebalanceRoutes() {
 
     const driverCount = parseInt(
@@ -563,7 +575,6 @@ function rebalanceRoutes() {
         return;
     }
 
-    // CALCUL UNGHI
     validStops.forEach(stop => {
 
         const dx =
@@ -585,12 +596,10 @@ function rebalanceRoutes() {
         stop.angle = angle;
     });
 
-    // SORTARE
     validStops.sort(
         (a, b) => a.angle - b.angle
     );
 
-    // RESET
     routeSummaries = {};
 
     let driverGroups = [];
@@ -607,7 +616,6 @@ function rebalanceRoutes() {
         });
     }
 
-    // IMPARTIRE
     const chunkSize = Math.ceil(
         validStops.length / driverCount
     );
@@ -626,7 +634,6 @@ function rebalanceRoutes() {
             .push(stop);
     });
 
-    // APLICARE
     driverGroups.forEach(driver => {
 
         driver.stops.forEach(stop => {
@@ -645,12 +652,12 @@ function rebalanceRoutes() {
 }
 
 
-// EXPORT EXCEL
+// EXPORT
 function exportRoutes() {
 
     const workbook = XLSX.utils.book_new();
 
-    // SHEETURI RUTE
+    // ROUTES
     const uniqueRoutes = [
         ...new Set(
             stopsData.map(x => x.route)
@@ -658,10 +665,6 @@ function exportRoutes() {
     ];
 
     uniqueRoutes.forEach(route => {
-
-        if (route === 'Invalid') {
-            return;
-        }
 
         const routeStops = stopsData.filter(
             x => x.route === route
@@ -688,12 +691,15 @@ function exportRoutes() {
         );
     });
 
-    // SHEET MUTARI
-    if (movedStops.length > 0) {
+    // FINAL MOVES ONLY
+    const movedStopsArray =
+        Object.values(movedStops);
+
+    if (movedStopsArray.length > 0) {
 
         const movesSheet =
             XLSX.utils.json_to_sheet(
-                movedStops.map(
+                movedStopsArray.map(
                     (move, index) => ({
 
                         Move_Number:
@@ -703,12 +709,12 @@ function exportRoutes() {
                             move.postcode,
 
                         From_Route:
-                            move.from,
+                            move.originalRoute,
 
                         To_Route:
-                            move.to,
+                            move.finalRoute,
 
-                        Moved_At:
+                        Last_Modified:
                             move.movedAt
                     })
                 )
