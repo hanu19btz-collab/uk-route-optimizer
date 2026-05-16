@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>UK Route Planner</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css"
+    />
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="topbar">
+
+    <div class="logo">
+        UK Route Planner
+    </div>
+
+    <div class="controls">
+
+        <input
+            type="file"
+            id="excelFile"
+            accept=".xlsx,.xls"
+        >
+
+        <select id="driverCount">
+
+            <option value="1">1 Driver</option>
+            <option value="2">2 Drivers</option>
+            <option value="3">3 Drivers</option>
+            <option value="4">4 Drivers</option>
+            <option value="5">5 Drivers</option>
+            <option value="6" selected>6 Drivers</option>
+
+        </select>
+
+        <button id="rebalanceBtn">
+            Rebalance
+        </button>
+
+        <button id="uploadBtn">
+            Generate Routes
+        </button>
+
+        <button id="exportBtn">
+            Export Routes
+        </button>
+
+    </div>
+
+</div>
+
+<div class="main-layout">
+
+    <div class="sidebar">
+
+        <h2>Routes</h2>
+
+        <div id="routeStats"></div>
+
+    </div>
+
+    <div id="map"></div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script src="app.js"></script>
+
+</body>
+</html>
