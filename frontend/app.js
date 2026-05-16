@@ -97,7 +97,7 @@ uploadBtn.addEventListener('click', async () => {
     try {
 
         const response = await fetch(
-            'http://127.0.0.1:8000/upload',
+            'https://uk-route-backend.onrender.com/upload',
             {
                 method: 'POST',
                 body: formData
