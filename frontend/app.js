@@ -352,18 +352,32 @@ function createPopup(index) {
 }
 
 
+// DYNAMIC ROUTE OPTIONS
 function getRouteOptions(currentRoute) {
 
-    const routes = [
-        "Driver 1",
-        "Driver 2",
-        "Driver 3",
-        "Driver 4",
-        "Driver 5",
-        "Driver 6"
+    // existing routes
+    const existingRoutes = [
+        ...new Set(
+            stopsData.map(x => x.route)
+        )
     ];
 
-    return routes.map(route => `
+    // add missing drivers
+    for (let i = 1; i <= 6; i++) {
+
+        const driverName =
+            `Driver ${i}`;
+
+        if (!existingRoutes.includes(driverName)) {
+
+            existingRoutes.push(driverName);
+        }
+    }
+
+    // sort
+    existingRoutes.sort();
+
+    return existingRoutes.map(route => `
         <option
             value="${route}"
             ${route === currentRoute ? 'selected' : ''}
@@ -445,6 +459,10 @@ window.changeRoute = async function(index) {
         stop.color =
             DRIVER_COLORS[driverNumber];
 
+    } else {
+
+        stop.color =
+            ROUTE_COLORS[newRoute] || "gray";
     }
 
     await renderMap();
